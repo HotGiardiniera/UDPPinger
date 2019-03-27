@@ -30,7 +30,6 @@ int main(int argc, char **argv)
     int rec_port = atoi(argv[argc-1]);      // second arg is port number
     udppinger::UDPPinger pinger = udppinger::UDPPinger(argv[argc-2], rec_port, failfast, lastsuccess);
 
-    // pinger.send("Hello",5);
     pinger.ping();
 
 

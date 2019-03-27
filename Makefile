@@ -1,4 +1,4 @@
-CPPFLAGS=-Wall -pedantic -std=c++0x
+CPPFLAGS=-Wall -pedantic -std=c++0x -lm
 CC=g++
 FILES= UDPPinger.cpp main.cpp
 

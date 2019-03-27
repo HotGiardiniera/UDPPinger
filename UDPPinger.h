@@ -3,7 +3,6 @@
 
 #include <string>
 #include <netdb.h>
-#include <netdb.h>
 #include <unordered_set>
 #include <unordered_map>
 
@@ -31,9 +30,12 @@ private:
     bool                failfast;
     bool                lastsuccess;
 
-    std::unordered_set<std::string>     blacklist;
+    std::string         blacklistfilename;
+    std::string         whitelistfilename;
+
+    std::unordered_set<std::string>                  blacklist;
     std::unordered_map<std::string, std::string>     whitelist;
-    void removeFromBlackList();
+    void removeFromFile(std::string filename);
 
     
 };
