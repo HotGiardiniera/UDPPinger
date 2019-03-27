@@ -2,6 +2,8 @@
 import random
 from socket import socket, AF_INET, SOCK_DGRAM
 
+# Simple local python UDP server that will drop a packet ~40% of the time
+# This server is only used to test UDP clients
 
 def main():
     server = socket(AF_INET, SOCK_DGRAM)
