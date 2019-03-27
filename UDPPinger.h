@@ -35,7 +35,7 @@ private:
 
     std::unordered_set<std::string>                  blacklist;
     std::unordered_map<std::string, std::string>     whitelist;
-    void removeFromFile(std::string filename);
+    void removeFromFile(std::string filename, bool wl);
 
     
 };

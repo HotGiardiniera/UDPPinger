@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <sys/time.h>
-#include <time.h> 
+#include <ctime>
 
 
 namespace udppinger {
@@ -20,7 +20,7 @@ namespace udppinger {
     {
         // Set our hash of blacklisted ips coming from file 'blacklist.txt'
         std::fstream fs;
-        std::string badIP, goodIp;
+        std::string badIP;
         blacklistfilename = "blacklist.txt";
         fs.open (blacklistfilename, std::fstream::in);
         while(fs >> badIP){
@@ -29,10 +29,18 @@ namespace udppinger {
         }
         fs.close();
 
+        std::string goodIp, fileavg, filemin, filemax, filetime;
         whitelistfilename = "whitelist.txt";
-        fs.open ("whitelist.txt", std::fstream::in);
-        while(fs >> goodIp){
-            blacklist.insert(goodIp);
+        fs.open (whitelistfilename, std::fstream::in);
+        while(fs >> goodIp >> fileavg >> filemin >> filemax >> filetime){
+            std::time_t now = std::time(nullptr);
+            std::time_t fromfile(std::stol(filetime, nullptr));
+            double seconds = difftime(now, fromfile);
+            if(seconds < 60){ // Only whitelist ones we've hit in the last minute
+                whitelist[goodIp] = fileavg + " " + filemin + " " + filemax;
+            } else {
+                this->removeFromFile(this->whitelistfilename, true);
+            }
         }
         fs.close();
 
@@ -101,14 +109,15 @@ namespace udppinger {
             std::cout << std::endl;
         }
 
+        bool onwhitelist = whitelist.count(this->getAddr());
+        bool hasFailed = false;
         if(this->lastsuccess){
-            if(whitelist.count(this->getAddr())){
+            if(onwhitelist){
                 std::cout << "Using recent ping statistics and pinging only once" << std::endl;
                 transmit = 1;
             } else {
-                std::cout << "Recent ping statistics not dound" << std::endl;
+                std::cout << "Recent ping statistics not found" << std::endl;
             }
-            
         }
 
         float min = std::numeric_limits<float>::infinity();
@@ -139,18 +148,26 @@ namespace udppinger {
                 } else {
                     // If we have a time out write it to a file
                     std::cout << " time=" << "TIMEOUT" << std::endl;
+                    hasFailed = true;
                     if(!filewritten && !onBlackList){
                         std::fstream fs;
-                        fs.open("blacklist.txt", std::fstream::out | std::fstream::app);
+                        fs.open(this->blacklistfilename, std::fstream::out | std::fstream::app);
                         fs << this->getAddr() << "\n";
                         fs.close();
                         filewritten = true;
-                        if(failfast){ i = i+1; break; } 
+                        if(failfast){ i = i+1; break; }
                     }
-
                 }
             } else {
                 std::cout << "Unable to ping " << this->getAddr() << std::endl;
+            }
+        }
+        if(lastsuccess && onwhitelist){
+            if(!hasFailed ){
+                std::cout << std::endl << "1 ping successful rereporting last minute statistics" << std::endl;
+                std::cout << "IP -> Avg(ms) -> Min(ms) -> Max(ms)" << std::endl;
+                std::cout  << this->getAddr() << " " << this->whitelist[this->getAddr()] << std::endl;
+                return;
             }
         }
         i = i-1; // True number sent
@@ -166,11 +183,22 @@ namespace udppinger {
         std::cout << " min: " << min << "ms max: " << max << "ms" << std::endl;
 
         if(recieved == transmit){ //Successful ping, remove from our list and clear from file
-            this->removeFromFile(this->blacklistfilename);
+            this->removeFromFile(this->blacklistfilename, false);
+            // Add statistics to our whitelist for a given IP
+            if(onwhitelist){
+                this->removeFromFile(this->whitelistfilename, true);
+            }
+            std::fstream fs2;
+            fs2.open(this->whitelistfilename, std::fstream::out | std::fstream::app);
+            fs2 << this->getAddr() << " " << avg << " " << min << " " << max << " " << std::time(nullptr) << "\n";
+            fs2.close();
+        }
+        if(onwhitelist && hasFailed){
+          this->removeFromFile(this->whitelistfilename, true);
         }
     }
 
-    void UDPPinger::removeFromFile(std::string filename){
+    void UDPPinger::removeFromFile(std::string filename, bool wl){
         std::string fileIp, ip = this->getAddr();
         std::ifstream filein(filename); 
         std::ofstream fileout("temp.txt");
@@ -179,10 +207,18 @@ namespace udppinger {
             return;
         }
         ip = ip;
-        while(filein >> fileIp){
-            if(fileIp != ip){
-                std::cout << "rewriting " << fileIp << std::endl;
-                fileout << fileIp;
+        if(wl){ // TODO this is very non DRY
+            std::string goodIp, fileavg, filemin, filemax, filetime;
+            while(filein >> goodIp >> fileavg >> filemin >> filemax >> filetime){
+                if(goodIp != ip){
+                    fileout << goodIp << " " << fileavg << " " << filemin << " " << filemax << " " << filetime;
+                }
+            }
+        } else {
+            while(filein >> fileIp){
+                if(fileIp != ip){
+                    fileout << fileIp;
+                }
             }
         }
         if (std::rename("temp.txt", filename.c_str())) {
