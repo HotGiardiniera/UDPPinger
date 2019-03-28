@@ -2,7 +2,7 @@
 UDP Pinger is a basic udp pinging program that sends 10 64 UDP packets to a specified IP Port. Response timeouts are set to 1 second by default.
 
 **Requirements**
-C++ 11
+C++ 11,
 Unix timestamp support
 
 ## To compile
