@@ -24,3 +24,7 @@ Unix timestamp support
 `-s` "last **s**uccess"
 
 This option will check a white-listed IP file to see if an IP previously had 10 successful pings in the last minute. If an IP exists on the white-list and this flag is set then we will try one ping and report the previous statistics if successful. A failed ping (regardless of this flag) will remove from the white-list.
+
+TODO:
+
+Don't open files so frequently
